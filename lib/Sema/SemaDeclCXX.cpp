@@ -2125,7 +2125,7 @@ static bool findCircularInheritance(const CXXRecordDecl *Class,
 CXXBaseSpecifier *
 Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
                          SourceRange SpecifierRange,
-                         bool Virtual, AccessSpecifier Access,
+                         bool Virtual, bool Copy, AccessSpecifier Access,
                          TypeSourceInfo *TInfo,
                          SourceLocation EllipsisLoc) {
   QualType BaseType = TInfo->getType();
@@ -2166,7 +2166,7 @@ Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
       }
     }
 
-    return new (Context) CXXBaseSpecifier(SpecifierRange, Virtual,
+    return new (Context) CXXBaseSpecifier(SpecifierRange, Virtual, Copy,
                                           Class->getTagKind() == TTK_Class,
                                           Access, TInfo, EllipsisLoc);
   }
@@ -2240,7 +2240,7 @@ Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
     Class->setInvalidDecl();
 
   // Create the base specifier.
-  return new (Context) CXXBaseSpecifier(SpecifierRange, Virtual,
+  return new (Context) CXXBaseSpecifier(SpecifierRange, Virtual, Copy,
                                         Class->getTagKind() == TTK_Class,
                                         Access, TInfo, EllipsisLoc);
 }
@@ -2253,7 +2253,7 @@ Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
 BaseResult
 Sema::ActOnBaseSpecifier(Decl *classdecl, SourceRange SpecifierRange,
                          ParsedAttributes &Attributes,
-                         bool Virtual, AccessSpecifier Access,
+                         bool Virtual, bool Copy, AccessSpecifier Access,
                          ParsedType basetype, SourceLocation BaseLoc,
                          SourceLocation EllipsisLoc) {
   if (!classdecl)
@@ -2292,7 +2292,7 @@ Sema::ActOnBaseSpecifier(Decl *classdecl, SourceRange SpecifierRange,
     return true;
   
   if (CXXBaseSpecifier *BaseSpec = CheckBaseSpecifier(Class, SpecifierRange,
-                                                      Virtual, Access, TInfo,
+                                                      Virtual, Copy, Access, TInfo,
                                                       EllipsisLoc))
     return BaseSpec;
   else

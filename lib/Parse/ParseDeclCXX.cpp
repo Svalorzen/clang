@@ -2075,7 +2075,7 @@ BaseResult Parser::ParseBaseSpecifier(Decl *ClassDecl) {
 
   // Notify semantic analysis that we have parsed a complete
   // base-specifier.
-  return Actions.ActOnBaseSpecifier(ClassDecl, Range, Attributes, IsVirtual,
+  return Actions.ActOnBaseSpecifier(ClassDecl, Range, Attributes, IsVirtual, false,
                                     Access, BaseType.get(), BaseLoc,
                                     EllipsisLoc);
 }

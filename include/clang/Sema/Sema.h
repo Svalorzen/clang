@@ -5669,14 +5669,14 @@ public:
   /// ActOnBaseSpecifier - Parsed a base specifier
   CXXBaseSpecifier *CheckBaseSpecifier(CXXRecordDecl *Class,
                                        SourceRange SpecifierRange,
-                                       bool Virtual, AccessSpecifier Access,
+                                       bool Virtual, bool Copy, AccessSpecifier Access,
                                        TypeSourceInfo *TInfo,
                                        SourceLocation EllipsisLoc);
 
   BaseResult ActOnBaseSpecifier(Decl *classdecl,
                                 SourceRange SpecifierRange,
                                 ParsedAttributes &Attrs,
-                                bool Virtual, AccessSpecifier Access,
+                                bool Virtual, bool Copy, AccessSpecifier Access,
                                 ParsedType basetype,
                                 SourceLocation BaseLoc,
                                 SourceLocation EllipsisLoc);

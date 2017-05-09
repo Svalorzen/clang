@@ -9502,7 +9502,6 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
   const ImplicitConversionSequence &Conv = Cand->Conversions[I];
   assert(Conv.isBad());
   assert(Cand->Function && "for now, candidate must be a function");
-  assert(false && "diagnosebadconversion");
   FunctionDecl *Fn = Cand->Function;
 
   // There's a conversion slot for the object argument if this is a

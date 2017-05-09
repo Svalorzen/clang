@@ -198,9 +198,9 @@ class CXXBaseSpecifier {
 public:
   CXXBaseSpecifier() { }
 
-  CXXBaseSpecifier(SourceRange R, bool V, bool BC, AccessSpecifier A,
+  CXXBaseSpecifier(SourceRange R, bool V, bool copy, bool BC, AccessSpecifier A,
                    TypeSourceInfo *TInfo, SourceLocation EllipsisLoc)
-    : Range(R), EllipsisLoc(EllipsisLoc), Virtual(V), BaseOfClass(BC),
+    : Range(R), EllipsisLoc(EllipsisLoc), Virtual(V), Copy(copy), BaseOfClass(BC),
       Access(A), InheritConstructors(false), BaseTypeInfo(TInfo) { }
 
   /// \brief Retrieves the source range that contains the entire base specifier.
@@ -246,8 +246,11 @@ public:
   AccessSpecifier getAccessSpecifier() const {
     if ((AccessSpecifier)Access == AS_none)
       return BaseOfClass? AS_private : AS_public;
-    else
+    else {
+      if (isCopy())
+          return AS_public;
       return (AccessSpecifier)Access;
+    }
   }
 
   /// \brief Retrieves the access specifier as written in the source code

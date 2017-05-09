@@ -2392,6 +2392,7 @@ bool ASTNodeImporter::ImportDefinition(RecordDecl *From, RecordDecl *To,
                     new (Importer.getToContext()) 
                       CXXBaseSpecifier(Importer.Import(Base1.getSourceRange()),
                                        Base1.isVirtual(),
+                                       Base1.isCopy(),
                                        Base1.isBaseOfClass(),
                                        Base1.getAccessSpecifierAsWritten(),
                                    Importer.Import(Base1.getTypeSourceInfo()),
@@ -7393,7 +7394,9 @@ CXXBaseSpecifier *ASTImporter::Import(const CXXBaseSpecifier *BaseSpec) {
 
   CXXBaseSpecifier *Imported = new (ToContext) CXXBaseSpecifier(
         Import(BaseSpec->getSourceRange()),
-        BaseSpec->isVirtual(), BaseSpec->isBaseOfClass(),
+        BaseSpec->isVirtual(), 
+        BaseSpec->isCopy(),
+        BaseSpec->isBaseOfClass(),
         BaseSpec->getAccessSpecifierAsWritten(),
         Import(BaseSpec->getTypeSourceInfo()),
         Import(BaseSpec->getEllipsisLoc()));
