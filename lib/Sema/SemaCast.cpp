@@ -692,6 +692,7 @@ void CastOperation::CheckDynamicCast() {
     if (Self.CheckDerivedToBaseConversion(SrcPointee, DestPointee,
                                            OpRange.getBegin(), OpRange, 
                                            &BasePath)) {
+      assert(false && "siamo qui nel dynamic cast");
       SrcExpr = ExprError();
       return;
     }

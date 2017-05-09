@@ -168,6 +168,11 @@ class CXXBaseSpecifier {
   /// \brief Whether this is a virtual base class or not.
   unsigned Virtual : 1;
 
+    public:
+  /// \brief Temp to check whether we should copy this class or not.
+  unsigned Copy : 1;
+    private:
+
   /// \brief Whether this is the base of a class (true) or of a struct (false).
   ///
   /// This determines the mapping from the access specifier as written in the
@@ -210,6 +215,8 @@ public:
 
   /// \brief Determines whether the base class is a virtual base class (or not).
   bool isVirtual() const { return Virtual; }
+
+  bool isCopy() const { return Copy; }
 
   /// \brief Determine whether this base class is a base of a class declared
   /// with the 'class' keyword (vs. one declared with the 'struct' keyword).
@@ -1471,6 +1478,8 @@ public:
   ///
   /// \returns true if this class is derived from Base, false otherwise.
   bool isDerivedFrom(const CXXRecordDecl *Base) const;
+  bool isCopiedFrom(const CXXRecordDecl *Base) const;
+  bool isDerivedOrCopiedFrom(const CXXRecordDecl *Base) const;
 
   /// \brief Determine whether this class is derived from the type \p Base.
   ///
@@ -1489,6 +1498,8 @@ public:
   /// \todo add a separate parameter to configure IsDerivedFrom, rather than
   /// tangling input and output in \p Paths
   bool isDerivedFrom(const CXXRecordDecl *Base, CXXBasePaths &Paths) const;
+  bool isCopiedFrom(const CXXRecordDecl *Base, CXXBasePaths &Paths) const;
+  bool isDerivedOrCopiedFrom(const CXXRecordDecl *Base, CXXBasePaths &Paths) const;
 
   /// \brief Determine whether this class is virtually derived from
   /// the class \p Base.
@@ -1575,6 +1586,9 @@ public:
   /// The base record pointer should refer to the canonical CXXRecordDecl of the
   /// base class that we are searching for.
   static bool FindBaseClass(const CXXBaseSpecifier *Specifier,
+                            CXXBasePath &Path, const CXXRecordDecl *BaseRecord);
+
+  static bool FindCopiedClass(const CXXBaseSpecifier *Specifier,
                             CXXBasePath &Path, const CXXRecordDecl *BaseRecord);
 
   /// \brief Base-class lookup callback that determines whether the

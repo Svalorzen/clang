@@ -42,6 +42,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include <map>
 #include <set>
+#include <iostream>
 
 using namespace clang;
 
@@ -2460,6 +2461,8 @@ bool Sema::IsDerivedFrom(SourceLocation Loc, QualType Derived, QualType Base) {
   // to be able to use the inheritance relationship?
   if (!isCompleteType(Loc, Derived) && !DerivedRD->isBeingDefined())
     return false;
+
+  std::cout << "checking isderivedfrom\n";
   
   return DerivedRD->isDerivedFrom(BaseRD);
 }
@@ -2483,6 +2486,43 @@ bool Sema::IsDerivedFrom(SourceLocation Loc, QualType Derived, QualType Base,
     return false;
   
   return DerivedRD->isDerivedFrom(BaseRD, Paths);
+}
+
+bool Sema::IsDerivedOrCopiedFrom(SourceLocation Loc, QualType Derived, QualType Base) {
+  if (!getLangOpts().CPlusPlus)
+    return false;
+  
+  CXXRecordDecl *DerivedRD = Derived->getAsCXXRecordDecl();
+  if (!DerivedRD)
+    return false;
+  
+  CXXRecordDecl *BaseRD = Base->getAsCXXRecordDecl();
+  if (!BaseRD)
+    return false;
+  
+  if (!isCompleteType(Loc, Derived) && !DerivedRD->isBeingDefined())
+    return false;
+  
+  return DerivedRD->isDerivedOrCopiedFrom(BaseRD);
+}
+
+bool Sema::IsDerivedOrCopiedFrom(SourceLocation Loc, QualType Derived, QualType Base,
+                         CXXBasePaths &Paths) {
+  if (!getLangOpts().CPlusPlus)
+    return false;
+  
+  CXXRecordDecl *DerivedRD = Derived->getAsCXXRecordDecl();
+  if (!DerivedRD)
+    return false;
+  
+  CXXRecordDecl *BaseRD = Base->getAsCXXRecordDecl();
+  if (!BaseRD)
+    return false;
+  
+  if (!isCompleteType(Loc, Derived) && !DerivedRD->isBeingDefined())
+    return false;
+
+  return DerivedRD->isDerivedOrCopiedFrom(BaseRD, Paths);
 }
 
 void Sema::BuildBasePathArray(const CXXBasePaths &Paths, 
@@ -2527,14 +2567,16 @@ Sema::CheckDerivedToBaseConversion(QualType Derived, QualType Base,
                                    SourceLocation Loc, SourceRange Range,
                                    DeclarationName Name,
                                    CXXCastPath *BasePath,
-                                   bool IgnoreAccess) {
+                                   bool IgnoreAccess, bool copyIsOk) {
   // First, determine whether the path from Derived to Base is
   // ambiguous. This is slightly more expensive than checking whether
   // the Derived to Base conversion exists, because here we need to
   // explore multiple paths to determine if there is an ambiguity.
   CXXBasePaths Paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
                      /*DetectVirtual=*/false);
-  bool DerivationOkay = IsDerivedFrom(Loc, Derived, Base, Paths);
+  bool DerivationOkay = copyIsOk ? IsDerivedOrCopiedFrom(Loc, Derived, Base, Paths) : 
+                                   IsDerivedFrom(Loc, Derived, Base, Paths);
+  std::cout << "test\n";
   assert(DerivationOkay &&
          "Can only be used with a derived-to-base conversion");
   (void)DerivationOkay;
@@ -2545,6 +2587,7 @@ Sema::CheckDerivedToBaseConversion(QualType Derived, QualType Base,
       switch (CheckBaseClassAccess(Loc, Base, Derived, Paths.front(),
                                    InaccessibleBaseID)) {
         case AR_inaccessible: 
+          assert(false && "AR_inaccessible");
           return true;
         case AR_accessible: 
         case AR_dependent:
@@ -2568,7 +2611,8 @@ Sema::CheckDerivedToBaseConversion(QualType Derived, QualType Base,
     // performance isn't as much of an issue.
     Paths.clear();
     Paths.setRecordingPaths(true);
-    bool StillOkay = IsDerivedFrom(Loc, Derived, Base, Paths);
+    bool StillOkay = copyIsOk ? IsDerivedOrCopiedFrom(Loc, Derived, Base, Paths) :
+                                IsDerivedFrom(Loc, Derived, Base, Paths);
     assert(StillOkay && "Can only be used with a derived-to-base conversion");
     (void)StillOkay;
 
@@ -2581,6 +2625,7 @@ Sema::CheckDerivedToBaseConversion(QualType Derived, QualType Base,
     Diag(Loc, AmbigiousBaseConvID)
     << Derived << Base << PathDisplayStr << Range << Name;
   }
+  assert(false && "end of CheckDerivedToBaseConversion");
   return true;
 }
 
@@ -2588,11 +2633,11 @@ bool
 Sema::CheckDerivedToBaseConversion(QualType Derived, QualType Base,
                                    SourceLocation Loc, SourceRange Range,
                                    CXXCastPath *BasePath,
-                                   bool IgnoreAccess) {
+                                   bool IgnoreAccess, bool copyIsOk) {
   return CheckDerivedToBaseConversion(
       Derived, Base, diag::err_upcast_to_inaccessible_base,
       diag::err_ambiguous_derived_to_base_conv, Loc, Range, DeclarationName(),
-      BasePath, IgnoreAccess);
+      BasePath, IgnoreAccess, copyIsOk);
 }
 
 
@@ -5149,7 +5194,7 @@ Sema::MarkBaseAndMemberDestructorsReferenced(SourceLocation Location,
       CheckDerivedToBaseConversion(
           Context.getTypeDeclType(ClassDecl), VBase.getType(),
           diag::err_access_dtor_vbase, 0, ClassDecl->getLocation(),
-          SourceRange(), DeclarationName(), nullptr);
+          SourceRange(), DeclarationName(), nullptr, false, true);
     }
 
     MarkFunctionReferenced(Location, Dtor);
@@ -14105,7 +14150,7 @@ bool Sema::CheckOverridingFunctionReturnType(const CXXMethodDecl *New,
             diag::err_covariant_return_inaccessible_base,
             diag::err_covariant_return_ambiguous_derived_to_base_conv,
             New->getLocation(), New->getReturnTypeSourceRange(),
-            New->getDeclName(), nullptr)) {
+            New->getDeclName(), nullptr, false, true)) {
       // FIXME: this note won't trigger for delayed access control
       // diagnostics, and it's impossible to get an undelayed error
       // here from access control during the original parse because

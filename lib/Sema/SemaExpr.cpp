@@ -2658,7 +2658,7 @@ Sema::PerformObjectMemberConversion(Expr *From,
     if (IsDerivedFrom(FromLoc, FromRecordType, QRecordType)) {
       CXXCastPath BasePath;
       if (CheckDerivedToBaseConversion(FromRecordType, QRecordType,
-                                       FromLoc, FromRange, &BasePath))
+                                       FromLoc, FromRange, &BasePath, false, true))
         return ExprError();
 
       if (PointerConversions)
@@ -2694,7 +2694,7 @@ Sema::PerformObjectMemberConversion(Expr *From,
       assert(IsDerivedFrom(FromLoc, FromRecordType, URecordType));
       CXXCastPath BasePath;
       if (CheckDerivedToBaseConversion(FromRecordType, URecordType,
-                                       FromLoc, FromRange, &BasePath))
+                                       FromLoc, FromRange, &BasePath, false, true))
         return ExprError();
 
       QualType UType = URecordType;
@@ -2714,7 +2714,7 @@ Sema::PerformObjectMemberConversion(Expr *From,
   CXXCastPath BasePath;
   if (CheckDerivedToBaseConversion(FromRecordType, DestRecordType,
                                    FromLoc, FromRange, &BasePath,
-                                   IgnoreAccess))
+                                   IgnoreAccess, true))
     return ExprError();
 
   return ImpCastExprToType(From, DestType, CK_UncheckedDerivedToBase,

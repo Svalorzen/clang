@@ -94,6 +94,51 @@ bool CXXRecordDecl::isDerivedFrom(const CXXRecordDecl *Base,
       Paths);
 }
 
+bool CXXRecordDecl::isCopiedFrom(const CXXRecordDecl *Base) const {
+  CXXBasePaths Paths(/*FindAmbiguities=*/false, /*RecordPaths=*/false,
+                     /*DetectVirtual=*/false);
+  return isCopiedFrom(Base, Paths);
+}
+
+bool CXXRecordDecl::isCopiedFrom(const CXXRecordDecl *Base,
+                                  CXXBasePaths &Paths) const {
+  if (getCanonicalDecl() == Base->getCanonicalDecl())
+    return false;
+  
+  Paths.setOrigin(const_cast<CXXRecordDecl*>(this));
+
+  const CXXRecordDecl *BaseDecl = Base->getCanonicalDecl();
+  // FIXME: Capturing 'this' is a workaround for name lookup bugs in GCC 4.7.
+  return lookupInBases(
+      [BaseDecl](const CXXBaseSpecifier *Specifier, CXXBasePath &Path) {
+        return FindCopiedClass(Specifier, Path, BaseDecl);
+      },
+      Paths);
+}
+
+bool CXXRecordDecl::isDerivedOrCopiedFrom(const CXXRecordDecl *Base) const {
+  CXXBasePaths Paths(/*FindAmbiguities=*/false, /*RecordPaths=*/false,
+                     /*DetectVirtual=*/false);
+  return isDerivedOrCopiedFrom(Base, Paths);
+}
+
+bool CXXRecordDecl::isDerivedOrCopiedFrom(const CXXRecordDecl *Base,
+                                  CXXBasePaths &Paths) const {
+  if (getCanonicalDecl() == Base->getCanonicalDecl())
+    return false;
+  
+  Paths.setOrigin(const_cast<CXXRecordDecl*>(this));
+
+  const CXXRecordDecl *BaseDecl = Base->getCanonicalDecl();
+  // FIXME: Capturing 'this' is a workaround for name lookup bugs in GCC 4.7.
+  return lookupInBases(
+      [BaseDecl](const CXXBaseSpecifier *Specifier, CXXBasePath &Path) {
+        return FindBaseClass(Specifier, Path, BaseDecl) ||
+               FindCopiedClass(Specifier, Path, BaseDecl);
+      },
+      Paths);
+}
+
 bool CXXRecordDecl::isVirtuallyDerivedFrom(const CXXRecordDecl *Base) const {
   if (!getNumVBases())
     return false;
@@ -357,7 +402,16 @@ bool CXXRecordDecl::FindBaseClass(const CXXBaseSpecifier *Specifier,
                                   const CXXRecordDecl *BaseRecord) {
   assert(BaseRecord->getCanonicalDecl() == BaseRecord &&
          "User data for FindBaseClass is not canonical!");
-  return Specifier->getType()->castAs<RecordType>()->getDecl()
+  return (!Specifier->isCopy()) && Specifier->getType()->castAs<RecordType>()->getDecl()
+            ->getCanonicalDecl() == BaseRecord;
+}
+
+bool CXXRecordDecl::FindCopiedClass(const CXXBaseSpecifier *Specifier, 
+                                  CXXBasePath &Path,
+                                  const CXXRecordDecl *BaseRecord) {
+  assert(BaseRecord->getCanonicalDecl() == BaseRecord &&
+         "User data for FindCopiedClass is not canonical!");
+  return (Specifier->isCopy()) && Specifier->getType()->castAs<RecordType>()->getDecl()
             ->getCanonicalDecl() == BaseRecord;
 }
 

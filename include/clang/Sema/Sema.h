@@ -5690,20 +5690,26 @@ public:
   bool IsDerivedFrom(SourceLocation Loc, QualType Derived, QualType Base,
                      CXXBasePaths &Paths);
 
+  bool IsDerivedOrCopiedFrom(SourceLocation Loc, QualType Derived, QualType Base);
+  bool IsDerivedOrCopiedFrom(SourceLocation Loc, QualType Derived, QualType Base,
+                     CXXBasePaths &Paths);
+
   // FIXME: I don't like this name.
   void BuildBasePathArray(const CXXBasePaths &Paths, CXXCastPath &BasePath);
 
   bool CheckDerivedToBaseConversion(QualType Derived, QualType Base,
                                     SourceLocation Loc, SourceRange Range,
                                     CXXCastPath *BasePath = nullptr,
-                                    bool IgnoreAccess = false);
+                                    bool IgnoreAccess = false,
+                                    bool copyIsOk = false);
   bool CheckDerivedToBaseConversion(QualType Derived, QualType Base,
                                     unsigned InaccessibleBaseID,
                                     unsigned AmbigiousBaseConvID,
                                     SourceLocation Loc, SourceRange Range,
                                     DeclarationName Name,
                                     CXXCastPath *BasePath,
-                                    bool IgnoreAccess = false);
+                                    bool IgnoreAccess = false,
+                                    bool copyIsOk = false);
 
   std::string getAmbiguousPathsDisplayString(CXXBasePaths &Paths);
 

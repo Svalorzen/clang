@@ -6662,8 +6662,10 @@ InitializationSequence::Perform(Sema &S,
       if (S.CheckDerivedToBaseConversion(SourceType, Step->Type,
                                          CurInit.get()->getLocStart(),
                                          CurInit.get()->getSourceRange(),
-                                         &BasePath, IgnoreBaseAccess))
+                                         &BasePath, IgnoreBaseAccess)) {
+        assert(false && "Sema init");
         return ExprError();
+      }
 
       ExprValueKind VK =
           Step->Kind == SK_CastDerivedToBaseLValue ?

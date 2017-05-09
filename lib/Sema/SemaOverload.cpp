@@ -35,6 +35,7 @@
 #include "llvm/ADT/SmallString.h"
 #include <algorithm>
 #include <cstdlib>
+#include <iostream>
 
 using namespace clang;
 using namespace sema;
@@ -1214,6 +1215,7 @@ TryUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
   ImplicitConversionSequence ICS;
 
   if (SuppressUserConversions) {
+    std::cout << "Suppressed\n";
     // We're not in the case above, so there is no conversion that
     // we can perform.
     ICS.setBad(BadConversionSequence::no_conversion, From, ToType);
@@ -1317,6 +1319,7 @@ TryImplicitConversion(Sema &S, Expr *From, QualType ToType,
   ImplicitConversionSequence ICS;
   if (IsStandardConversion(S, From, ToType, InOverloadResolution,
                            ICS.Standard, CStyle, AllowObjCWritebackConversion)){
+    std::cout << "standard conversion\n";
     ICS.setStandard();
     return ICS;
   }
@@ -1337,6 +1340,7 @@ TryImplicitConversion(Sema &S, Expr *From, QualType ToType,
   if (ToType->getAs<RecordType>() && FromType->getAs<RecordType>() &&
       (S.Context.hasSameUnqualifiedType(FromType, ToType) ||
        S.IsDerivedFrom(From->getLocStart(), FromType, ToType))) {
+    std::cout << "in derived\n";
     ICS.setStandard();
     ICS.Standard.setAsIdentityConversion();
     ICS.Standard.setFromType(FromType);
@@ -1355,6 +1359,7 @@ TryImplicitConversion(Sema &S, Expr *From, QualType ToType,
     return ICS;
   }
 
+  std::cout << "trying user defined conversion\n";
   return TryUserDefinedConversion(S, From, ToType, SuppressUserConversions,
                                   AllowExplicit, InOverloadResolution, CStyle,
                                   AllowObjCWritebackConversion,
@@ -1575,6 +1580,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
   // (C++ 4p1).
 
   if (FromType == S.Context.OverloadTy) {
+    std::cout << "fromtype = s.context.overloadty\n";
     DeclAccessPair AccessPair;
     if (FunctionDecl *Fn
           = S.ResolveAddressOfOverloadedFunction(From, ToType, false,
@@ -1635,6 +1641,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
   if (argIsLValue &&
       !FromType->isFunctionType() && !FromType->isArrayType() &&
       S.Context.getCanonicalType(FromType) != S.Context.OverloadTy) {
+    std::cout << "lvalue to rvalue conversion\n";
     SCS.First = ICK_Lvalue_To_Rvalue;
 
     // C11 6.3.2.1p2:
@@ -1649,6 +1656,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     // just strip the qualifiers because they don't matter.
     FromType = FromType.getUnqualifiedType();
   } else if (FromType->isArrayType()) {
+    std::cout << "From type is array type\n";
     // Array-to-pointer conversion (C++ 4.2)
     SCS.First = ICK_Array_To_Pointer;
 
@@ -1686,6 +1694,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     FromType = S.Context.getPointerType(FromType);
   } else {
     // We don't require any conversions for the first step.
+      std::cout << "no need for conversions in first step\n";
     SCS.First = ICK_Identity;
   }
   SCS.setToType(0, FromType);
@@ -1769,6 +1778,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     SCS.Second = ICK_Writeback_Conversion;
   } else if (S.IsPointerConversion(From, FromType, ToType, InOverloadResolution,
                                    FromType, IncompatibleObjC)) {
+    std::cout << "pointer conversion!!\n";
     // Pointer conversions (C++ 4.10).
     SCS.Second = ICK_Pointer_Conversion;
     SCS.IncompatibleObjC = IncompatibleObjC;
@@ -1807,6 +1817,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     FromType = ToType;
   } else {
     // No second conversion required.
+      std::cout << "No second conversion required\n";
     SCS.Second = ICK_Identity;
   }
   SCS.setToType(1, FromType);
@@ -1851,6 +1862,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
   if (S.getLangOpts().CPlusPlus || !InOverloadResolution)
     return false;
 
+  std::cout << "Checking singleassignmentconstraints\n";
   ExprResult ER = ExprResult{From};
   Sema::AssignConvertType Conv =
       S.CheckSingleAssignmentConstraints(ToType, ER,
@@ -2252,15 +2264,19 @@ bool Sema::IsPointerConversion(Expr *From, QualType FromType, QualType ToType,
     return true;
   }
   const PointerType *FromTypePtr = FromType->getAs<PointerType>();
-  if (!FromTypePtr)
+  if (!FromTypePtr) {
+    std::cout << "failing pointer, not fromtypeptr\n";
     return false;
+  }
 
   QualType FromPointeeType = FromTypePtr->getPointeeType();
 
   // If the unqualified pointee types are the same, this can't be a
   // pointer conversion, so don't do all of the work below.
-  if (Context.hasSameUnqualifiedType(FromPointeeType, ToPointeeType))
+  if (Context.hasSameUnqualifiedType(FromPointeeType, ToPointeeType)) {
+    std::cout << "has same unqualified type\n";
     return false;
+  }
 
   // An rvalue of type "pointer to cv T," where T is an object type,
   // can be converted to an rvalue of type "pointer to cv void" (C++
@@ -2306,6 +2322,11 @@ bool Sema::IsPointerConversion(Expr *From, QualType FromType, QualType ToType,
   //
   // Note that we do not check for ambiguity or inaccessibility
   // here. That is handled by CheckPointerConversion.
+  std::cout << "FromPointeeType->isRecordType() = " << (bool)(FromPointeeType->isRecordType()) << "\n";
+  std::cout << "ToPointeeType->isRecordType() = " << (bool)(ToPointeeType->isRecordType()) << "\n";
+  std::cout << "!Context.hasSameUnqualifiedType(FromPointeeType, ToPointeeType) = " << (bool)(!Context.hasSameUnqualifiedType(FromPointeeType, ToPointeeType)) << "\n";
+  std::cout << "IsDerivedFrom(From->getLocStart(), FromPointeeType, ToPointeeType)) = " << (bool)(IsDerivedFrom(From->getLocStart(), FromPointeeType, ToPointeeType)) << "\n";
+  std::cout << "FromType = " << FromPointeeType.getAsString() << ", ToType = " << ToPointeeType.getAsString() << "\n";
   if (getLangOpts().CPlusPlus &&
       FromPointeeType->isRecordType() && ToPointeeType->isRecordType() &&
       !Context.hasSameUnqualifiedType(FromPointeeType, ToPointeeType) &&
@@ -2323,7 +2344,7 @@ bool Sema::IsPointerConversion(Expr *From, QualType FromType, QualType ToType,
                                                        ToType, Context);
     return true;
   }
-  
+  std::cout << "pointer despair\n"; 
   return false;
 }
  
@@ -4946,16 +4967,21 @@ TryCopyInitialization(Sema &S, Expr *From, QualType ToType,
                       bool InOverloadResolution,
                       bool AllowObjCWritebackConversion,
                       bool AllowExplicit) {
-  if (InitListExpr *FromInitList = dyn_cast<InitListExpr>(From))
+  if (InitListExpr *FromInitList = dyn_cast<InitListExpr>(From)) {
+    std::cout << "initlistexpr!\n";
     return TryListConversion(S, FromInitList, ToType, SuppressUserConversions,
                              InOverloadResolution,AllowObjCWritebackConversion);
+  }
 
-  if (ToType->isReferenceType())
+  if (ToType->isReferenceType()) {
+      std::cout << "Type is reference!\n";
     return TryReferenceInit(S, From, ToType,
                             /*FIXME:*/From->getLocStart(),
                             SuppressUserConversions,
                             AllowExplicit);
+  }
 
+  std::cout << "not a reference!\n";
   return TryImplicitConversion(S, From, ToType,
                                SuppressUserConversions,
                                /*AllowExplicit=*/false,
@@ -5958,6 +5984,7 @@ Sema::AddOverloadCandidate(FunctionDecl *Function,
   // list (8.3.5).
   if (TooManyArguments(NumParams, Args.size(), PartialOverloading) &&
       !Proto->isVariadic()) {
+    std::cout << "too many arguments\n";
     Candidate.Viable = false;
     Candidate.FailureKind = ovl_fail_too_many_arguments;
     return;
@@ -5971,6 +5998,7 @@ Sema::AddOverloadCandidate(FunctionDecl *Function,
   unsigned MinRequiredArgs = Function->getMinRequiredArguments();
   if (Args.size() < MinRequiredArgs && !PartialOverloading) {
     // Not enough arguments.
+    std::cout << "Too few arguments\n";
     Candidate.Viable = false;
     Candidate.FailureKind = ovl_fail_too_few_arguments;
     return;
@@ -6009,6 +6037,7 @@ Sema::AddOverloadCandidate(FunctionDecl *Function,
                                   getLangOpts().ObjCAutoRefCount,
                                 AllowExplicit);
       if (Candidate.Conversions[ArgIdx].isBad()) {
+        std::cout << "Bad conversion for argument " << ArgIdx << "\n";
         Candidate.Viable = false;
         Candidate.FailureKind = ovl_fail_bad_conversion;
         return;
@@ -9214,8 +9243,10 @@ OverloadCandidateSet::BestViableFunction(Sema &S, SourceLocation Loc,
         Best = Cand;
 
   // If we didn't find any viable functions, abort.
-  if (Best == end())
+  if (Best == end()) {
+    std::cout << "BestViableFunction << No viable function\n";
     return OR_No_Viable_Function;
+  }
 
   llvm::SmallVector<const NamedDecl *, 4> EquivalentCands;
 
@@ -9233,6 +9264,7 @@ OverloadCandidateSet::BestViableFunction(Sema &S, SourceLocation Loc,
       }
 
       Best = end();
+      std::cout << "BestViableFunction << Ambiguous\n";
       return OR_Ambiguous;
     }
   }
@@ -9240,13 +9272,16 @@ OverloadCandidateSet::BestViableFunction(Sema &S, SourceLocation Loc,
   // Best is the best viable function.
   if (Best->Function &&
       (Best->Function->isDeleted() ||
-       S.isFunctionConsideredUnavailable(Best->Function)))
+       S.isFunctionConsideredUnavailable(Best->Function))) {
+    std::cout << "BestViableFunction << Deleted\n";
     return OR_Deleted;
+  }
 
   if (!EquivalentCands.empty())
     S.diagnoseEquivalentInternalLinkageDeclarations(Loc, Best->Function,
                                                     EquivalentCands);
 
+  std::cout << "BestViableFunction << Success\n";
   return OR_Success;
 }
 
@@ -9467,6 +9502,7 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
   const ImplicitConversionSequence &Conv = Cand->Conversions[I];
   assert(Conv.isBad());
   assert(Cand->Function && "for now, candidate must be a function");
+  assert(false && "diagnosebadconversion");
   FunctionDecl *Fn = Cand->Function;
 
   // There's a conversion slot for the object argument if this is a
@@ -11437,6 +11473,7 @@ static void AddOverloadedCallCandidate(Sema &S,
                                    ExplicitTemplateArgs, Args, CandidateSet,
                                    /*SuppressUsedConversions=*/false,
                                    PartialOverloading);
+    std::cout << "Template!!\n";
     return;
   }
 
@@ -11794,9 +11831,11 @@ bool Sema::buildOverloadedCallSet(Scope *S, Expr *Fn,
     }
   }
 
-  if (CandidateSet->empty())
+  if (CandidateSet->empty()) {
+    std::cout << "buildOverloadedCallSet << Candidate set is empty\n";
     return false;
-
+  }
+  std::cout << "buildOverloadedCallSet << Finishing and returning false\n";
   UnbridgedCasts.restore();
   return false;
 }
@@ -11923,8 +11962,10 @@ ExprResult Sema::BuildOverloadedCallExpr(Scope *S, Expr *Fn,
 
   // If the user handed us something like `(&Foo)(Bar)`, we need to ensure that
   // functions that aren't addressible are considered unviable.
-  if (CalleesAddressIsTaken)
+  if (CalleesAddressIsTaken) {
+    std::cout << "BuildOverloadedCallExpr << callessAddressIsTaken = true\n";
     markUnaddressableCandidatesUnviable(*this, CandidateSet);
+  }
 
   OverloadCandidateSet::iterator Best;
   OverloadingResult OverloadResult =

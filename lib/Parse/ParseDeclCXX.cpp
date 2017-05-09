@@ -1618,9 +1618,8 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   if (DSC == DSC_trailing)
     TUK = Sema::TUK_Reference;
   else if (Tok.is(tok::l_brace) ||
-           (getLangOpts().CPlusPlus && Tok.is(tok::colon)) ||
-           (isCXX11FinalKeyword() &&
-            (NextToken().is(tok::l_brace) || NextToken().is(tok::colon)))) {
+           (getLangOpts().CPlusPlus && Tok.isOneOf(tok::colon, tok::equal)) ||
+           (isCXX11FinalKeyword() && NextToken().isOneOf(tok::l_brace, tok::colon))) {
     if (DS.isFriendSpecified()) {
       // C++ [class.friend]p2:
       //   A class shall not be defined in a friend declaration.
@@ -1660,7 +1659,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
       }
     }
 
-    if (Tok.isOneOf(tok::l_brace, tok::colon))
+    if (Tok.isOneOf(tok::l_brace, tok::colon, tok::equal))
       TUK = Sema::TUK_Definition;
     else
       TUK = Sema::TUK_Reference;
@@ -1898,7 +1897,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   // If there is a body, parse it and inform the actions module.
   if (TUK == Sema::TUK_Definition) {
     assert(Tok.is(tok::l_brace) ||
-           (getLangOpts().CPlusPlus && Tok.is(tok::colon)) ||
+           (getLangOpts().CPlusPlus && Tok.isOneOf(tok::colon, tok::equal)) ||
            isCXX11FinalKeyword());
     if (SkipBody.ShouldSkip)
       SkipCXXMemberSpecification(StartLoc, AttrFixitLoc, TagType,
@@ -1970,7 +1969,8 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
 ///         base-specifier '...'[opt]
 ///         base-specifier-list ',' base-specifier '...'[opt]
 void Parser::ParseBaseClause(Decl *ClassDecl) {
-  assert(Tok.is(tok::colon) && "Not a base clause");
+  assert(Tok.isOneOf(tok::colon, tok::equal) && "Not a base clause");
+  bool isCopy = Tok.is(tok::equal);
   ConsumeToken();
 
   // Build up an array of parsed base specifiers.
@@ -1984,8 +1984,10 @@ void Parser::ParseBaseClause(Decl *ClassDecl) {
       // opening brace.
       SkipUntil(tok::comma, tok::l_brace, StopAtSemi | StopBeforeMatch);
     } else {
+      auto result = Result.get();
+      if (isCopy) result->Copy = 1;
       // Add this to our array of base specifiers.
-      BaseInfo.push_back(Result.get());
+      BaseInfo.push_back(result);
     }
 
     // If the next token is a comma, consume it and keep reading
@@ -1993,6 +1995,8 @@ void Parser::ParseBaseClause(Decl *ClassDecl) {
     if (!TryConsumeToken(tok::comma))
       break;
   }
+
+  if (isCopy) assert(BaseInfo.size() == 1 && "Can only copy one class");
 
   // Attach the base specifiers
   Actions.ActOnBaseSpecifiers(ClassDecl, BaseInfo);
@@ -3178,7 +3182,7 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
     }
   }
 
-  if (Tok.is(tok::colon)) {
+  if (Tok.isOneOf(tok::colon, tok::equal)) {
     ParseBaseClause(TagDecl);
     if (!Tok.is(tok::l_brace)) {
       bool SuggestFixIt = false;
