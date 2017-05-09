@@ -1319,7 +1319,7 @@ TryImplicitConversion(Sema &S, Expr *From, QualType ToType,
   ImplicitConversionSequence ICS;
   if (IsStandardConversion(S, From, ToType, InOverloadResolution,
                            ICS.Standard, CStyle, AllowObjCWritebackConversion)){
-    std::cout << "standard conversion\n";
+    // std::cout << "standard conversion\n";
     ICS.setStandard();
     return ICS;
   }
@@ -1340,7 +1340,7 @@ TryImplicitConversion(Sema &S, Expr *From, QualType ToType,
   if (ToType->getAs<RecordType>() && FromType->getAs<RecordType>() &&
       (S.Context.hasSameUnqualifiedType(FromType, ToType) ||
        S.IsDerivedFrom(From->getLocStart(), FromType, ToType))) {
-    std::cout << "in derived\n";
+    // std::cout << "in derived\n";
     ICS.setStandard();
     ICS.Standard.setAsIdentityConversion();
     ICS.Standard.setFromType(FromType);
@@ -1359,7 +1359,7 @@ TryImplicitConversion(Sema &S, Expr *From, QualType ToType,
     return ICS;
   }
 
-  std::cout << "trying user defined conversion\n";
+  // std::cout << "trying user defined conversion\n";
   return TryUserDefinedConversion(S, From, ToType, SuppressUserConversions,
                                   AllowExplicit, InOverloadResolution, CStyle,
                                   AllowObjCWritebackConversion,
@@ -1641,7 +1641,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
   if (argIsLValue &&
       !FromType->isFunctionType() && !FromType->isArrayType() &&
       S.Context.getCanonicalType(FromType) != S.Context.OverloadTy) {
-    std::cout << "lvalue to rvalue conversion\n";
+    // std::cout << "lvalue to rvalue conversion\n";
     SCS.First = ICK_Lvalue_To_Rvalue;
 
     // C11 6.3.2.1p2:
@@ -1694,7 +1694,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     FromType = S.Context.getPointerType(FromType);
   } else {
     // We don't require any conversions for the first step.
-      std::cout << "no need for conversions in first step\n";
+      // std::cout << "no need for conversions in first step\n";
     SCS.First = ICK_Identity;
   }
   SCS.setToType(0, FromType);
@@ -1817,7 +1817,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     FromType = ToType;
   } else {
     // No second conversion required.
-      std::cout << "No second conversion required\n";
+    // std::cout << "No second conversion required\n";
     SCS.Second = ICK_Identity;
   }
   SCS.setToType(1, FromType);
@@ -1862,7 +1862,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
   if (S.getLangOpts().CPlusPlus || !InOverloadResolution)
     return false;
 
-  std::cout << "Checking singleassignmentconstraints\n";
+  // std::cout << "Checking singleassignmentconstraints\n";
   ExprResult ER = ExprResult{From};
   Sema::AssignConvertType Conv =
       S.CheckSingleAssignmentConstraints(ToType, ER,
@@ -4974,14 +4974,14 @@ TryCopyInitialization(Sema &S, Expr *From, QualType ToType,
   }
 
   if (ToType->isReferenceType()) {
-      std::cout << "Type is reference!\n";
+    // std::cout << "Type is reference!\n";
     return TryReferenceInit(S, From, ToType,
                             /*FIXME:*/From->getLocStart(),
                             SuppressUserConversions,
                             AllowExplicit);
   }
 
-  std::cout << "not a reference!\n";
+  // std::cout << "not a reference!\n";
   return TryImplicitConversion(S, From, ToType,
                                SuppressUserConversions,
                                /*AllowExplicit=*/false,
@@ -9502,6 +9502,7 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
   const ImplicitConversionSequence &Conv = Cand->Conversions[I];
   assert(Conv.isBad());
   assert(Cand->Function && "for now, candidate must be a function");
+  assert(false && "DiagnoseBadConversion");
   FunctionDecl *Fn = Cand->Function;
 
   // There's a conversion slot for the object argument if this is a
