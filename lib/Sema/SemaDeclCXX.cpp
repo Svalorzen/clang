@@ -2393,6 +2393,7 @@ bool Sema::AttachBaseSpecifiers(CXXRecordDecl *Class,
     }
   }
 
+  std::cout << "We should probably copy the ast here\n";
   // Attach the remaining base class specifiers to the derived class.
   Class->setBases(Bases.data(), NumGoodBases);
   
